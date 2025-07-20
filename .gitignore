@@ -1,0 +1,54 @@
+  # Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+*.venv*
+*_venv*  
+ENV/
+
+# Logs and output
+*.log
+*.out
+*.err
+
+# Spark temporary files
+spark-warehouse/
+derby.log
+metastore_db/
+*.crc
+
+# Hadoop / YARN temporary files
+._SUCCESS
+*.snappy
+*.avro
+*.parquet
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.iml
+
+# PySpark build artifacts
+target/
+dist/
+*.egg-info/
+.eggs/
+
+# Ignore all .env and .conf files except templates
+*.env
+!*-template.env
+*.conf
+!*-template.conf
+
+# OS generated files
+.DS_Store
+Thumbs.db
