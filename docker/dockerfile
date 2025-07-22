@@ -34,10 +34,7 @@ ENV PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 WORKDIR /opt/workspace
 
 # Copy entrypoint script
-COPY docker-entrypoint.sh /opt/
+COPY resources/shell/docker-entrypoint.sh /opt/
 RUN chmod +x /opt/docker-entrypoint.sh
 
 ENTRYPOINT ["/opt/docker-entrypoint.sh"]
-
-# Default command (overridable)
-CMD ["spark-shell"]

@@ -1,6 +1,6 @@
 # Spark Standalone Cluster with PySpark Apps
 
-This repository sets up an **Apache Spark standalone cluster** using Docker and Docker Compose, and provides a framework to **submit PySpark applications** to the cluster.
+This repository sets up an **Apache Spark standalone cluster** using Docker and Docker Compose, and provides a framework to **submit PySpark applications** (drivers) to the cluster.
 
 ---
 
@@ -9,104 +9,113 @@ This repository sets up an **Apache Spark standalone cluster** using Docker and 
 ```
 .
 ├── docker/
-│   ├── resources/         # Spark configuration and additional resources
+│   ├── resources/         # Spark configuration files and additional resources
 │   ├── dockerfile         # Docker image definition for Spark nodes
-│   ├── docker-compose.yml # Compose file to orchestrate Spark Master, Workers, and History Server
-│   ├── build.sh           # Script to build the custom Spark Docker image
-│   ├── restart.sh         # Helper script to restart the Spark cluster
-│   └── stop.sh            # Helper script to stop the Spark cluster
+│   ├── docker-compose.yml # Orchestrates Spark Master, Workers, and History Server
+│   ├── build.sh           # Builds the custom Spark Docker image
+│   ├── start.sh           # Starts the Spark cluster
+│   ├── restart.sh         # Restarts the Spark cluster
+│   └── stop.sh            # Stops the Spark cluster
 ├── python/
 │   ├── requirements.txt   # Python dependencies for PySpark applications
-│   ├── Scenarios/         # Directory for PySpark applications (e.g., hello_world.py)
+│   ├── Scenarios/         # PySpark application scripts (e.g., hello_world.py)
 │   └── utils/             # Utility modules (e.g., Spark session creation)
 ```
 
-### Directory Purpose
-- **docker/**  
-  Contains everything related to building and orchestrating the Spark cluster.  
-  - `dockerfile` defines the Spark image.
-  - `docker-compose.yml` defines the multi-container cluster (Master, Workers, History Server).
-  - Scripts like `build.sh`, `restart.sh`, and `stop.sh` are provided for cluster lifecycle management.
-  - `resources/` holds Spark configuration files (e.g., `spark-history-defaults.conf`).
+---
 
-- **python/**  
-  Contains PySpark application code and utilities.  
-  - `Scenarios/` includes PySpark jobs to be submitted to the Spark cluster.
-  - `utils/` contains helper modules (e.g., creating a `SparkSession`).
-  - `requirements.txt` specifies Python dependencies for your PySpark environment.
+## Directory Purpose
+
+### **docker/**
+- Contains everything related to building and orchestrating the Spark cluster:
+  - `dockerfile` – Defines the Spark image.
+  - `docker-compose.yml` – Defines the multi-container cluster (Master, Workers, History Server).
+  - `resources/` – Spark configuration files (e.g., `spark-defaults.conf`, `log4j2.properties`).
+  - Scripts: `build.sh`, `start.sh`, `restart.sh`, `stop.sh` for lifecycle management.
+
+### **python/**
+- Contains PySpark application code and helper utilities:
+  - `Scenarios/` – PySpark jobs to be submitted to the cluster.
+  - `utils/` – Modules for reusable components (e.g., `SparkSession` factory).
+  - `requirements.txt` – Python dependencies for running driver scripts.
 
 ---
 
 ## Application Workflow
 
-1. **Build Spark Cluster**  
-   The `dockerfile` builds a Spark image with the required version and settings.
-   
-2. **Run Spark Cluster**  
-   The `docker-compose.yml` starts a Spark standalone cluster:
-   - `spark-master` – Master node for the cluster.
-   - `spark-worker-1` and `spark-worker-2` – Worker nodes.
-   - `spark-history` – History server to track jobs.
+### **1. Cluster Setup**
+1. **Build Spark Image**  
+   Use `docker/build.sh` to build the custom Spark image.
 
-3. **Submit PySpark Applications**  
-   Once the cluster is running, you can submit PySpark jobs (e.g., `hello_world.py`) to the `spark-master`.
+2. **Start Spark Cluster**  
+   Use `docker/start.sh` to launch:
+   - **Spark Master** (`localhost:8080`)
+   - **Spark Workers** (`localhost:8081`, `localhost:8082`)
+   - **History Server** (`localhost:18080`)
 
 ---
 
-## Step-by-Step Setup
+### **2. Driver Setup**
+Drivers can run on your **host machine** or inside a **container**.
 
-### **1. Build Docker Image**
-Run the following from the `docker/` directory:
+#### **Host Machine Driver**
+1. **Set Environment Variables**  
+   Configure paths for Spark:
+   ```bash
+   export SPARK_CONF_DIR=/path/to/conf
+   export SPARK_DRIVER_LOGS_DIR=/path/to/logs
+   ```
+   These are used by both `spark-defaults.conf` and `log4j`.
+
+2. **Install Python Dependencies**  
+   ```bash
+   cd python
+   pip install -r requirements.txt
+   ```
+
+3. **Submit a PySpark Job**  
+   Use the pre-configured Spark session in `utils/spark_session.py`:
+   ```python
+   from utils.spark_session import spark
+
+   df = spark.range(10)
+   df.show()
+   ```
+
+#### **Container Driver (To Do)**
+- Add instructions for running drivers from a container (future enhancement).
+
+---
+
+### **3. Cluster Management**
+- **Restart the cluster:**  
+  ```bash
+  ./docker/restart.sh
+  ```
+- **Stop the cluster:**  
+  ```bash
+  ./docker/stop.sh
+  ```
+
+---
+
+## Cluster Setup Instructions
+
+### **Build Docker Image**
 ```bash
+cd docker
 ./build.sh
 ```
-This will create the custom Spark Docker image (e.g., `balogo-spark-4.0.0:latest`).
 
----
-
-### **2. Start the Spark Cluster**
-From the `docker/` directory, run:
+### **Start Spark Cluster**
 ```bash
 ./start.sh
 ```
-This will launch:
-- Spark Master at `localhost:8080`
-- Spark Worker UIs at `localhost:8081`, `localhost:8082`
-- Spark History Server at `localhost:18080`
 
----
-
-### **3. Install Python Dependencies**
-In your local Python environment (or a virtual environment), install dependencies:
-```bash
-cd python
-pip install -r requirements.txt
-```
-
----
-
-### **4. Submit a PySpark Job**
-Once the cluster is running, you can run any PySpark job by leveraging the `spark` variable from the `utils/spark_session.py` module.  
-
-For example:
-```python
-from utils.spark_session import spark
-
-# Your PySpark code here
-df = spark.range(10)
-df.show()
-`````
----
-
-### **5. Cluster Management**
-- **Restart the cluster:**
-  ```bash
-  ./restart.sh
-  ```
-- **Stop the cluster:**
-  ```bash
-  ./stop.sh
-  ```
+This starts:
+- Spark Master UI at [http://localhost:8080](http://localhost:8080)
+- Spark Worker UIs at [http://localhost:8081](http://localhost:8081) and [http://localhost:8082](http://localhost:8082)
+- Spark History Server at [http://localhost:18080](http://localhost:18080)
 
 ---
 
@@ -119,8 +128,6 @@ df.show()
 ---
 
 ## Next Steps
-- Add new PySpark scripts to `python/Scenarios/`.
+- Add new PySpark scripts under `python/Scenarios/`.
 - Use `utils/spark_session.py` for consistent Spark session creation.
-- Configure Spark further by editing files in `docker/resources/`.
-
----
+- Customize Spark settings in `docker/resources/` (e.g., `spark-defaults.conf`, `log4j2.properties`).

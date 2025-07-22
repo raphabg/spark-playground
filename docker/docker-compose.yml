@@ -14,7 +14,8 @@ services:
       - "7077:7077"        # Spark master port
       - "8080:8080" 
     volumes:
-      - /mnt/c/wsl_mount_point/spark_logs/eventlogs:/mnt/c/wsl_mount_point/spark_logs/eventlogs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_logs:/mnt/spark_logs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_data:/mnt/spark_data
     networks:
       - spark-net
   spark-worker-1:
@@ -33,7 +34,8 @@ services:
     ports:
       - "8081:8081" 
     volumes:
-      - /mnt/c/wsl_mount_point/spark_logs/eventlogs:/mnt/c/wsl_mount_point/spark_logs/eventlogs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_logs:/mnt/spark_logs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_data:/mnt/spark_data
     networks:
       - spark-net
 
@@ -53,7 +55,8 @@ services:
     ports:
       - "8082:8081" 
     volumes:
-      - /mnt/c/wsl_mount_point/spark_logs/eventlogs:/mnt/c/wsl_mount_point/spark_logs/eventlogs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_logs:/mnt/spark_logs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_data:/mnt/spark_data
     networks:
       - spark-net
 
@@ -69,11 +72,11 @@ services:
     depends_on:
       - spark-master
     volumes:
-      - /mnt/c/wsl_mount_point/spark_logs/eventlogs:/mnt/c/wsl_mount_point/spark_logs/eventlogs   # Persist event logs
-      - ./resources/settings/spark-history-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - /mnt/c/wsl_mount_point/spark_logs:/mnt/spark_logs   # Persist event logs
+      - /mnt/c/wsl_mount_point/spark_data:/mnt/spark_data
+      - ./resources/spark/conf/spark-history-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
     networks:
       - spark-net
-
 networks:
   spark-net:
     driver: bridge
