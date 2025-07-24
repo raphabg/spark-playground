@@ -1,7 +1,5 @@
 from utils.spark_session import spark
 
-print("Event Log Enabled:", spark.conf.get("spark.eventLog.dir"))
-
 # Create a sample list of data
 data = [
     ("Alice", 25),

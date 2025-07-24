@@ -1,3 +1,11 @@
 from pyspark.sql import SparkSession
 
-spark = SparkSession.builder.getOrCreate()
+spark = None
+
+def setup_spark_session():
+    global spark
+    spark = (SparkSession
+             .builder
+             .getOrCreate()
+             )
+

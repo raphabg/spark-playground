@@ -1,4 +1,4 @@
-# Use an official OpenJDK base image
+# Use the OpenJDK base image
 FROM azul/zulu-openjdk-debian:17-jre-latest
 
 # Set default environment variables
@@ -10,22 +10,35 @@ ENV SPARK_VERSION=4.0.0 \
     SPARK_MASTER_PORT=7077 \
     SPARK_WORKER_CORES=2 \
     SPARK_WORKER_MEMORY=2g \
-    SPARK_HISTORY_OPTS=""
+    SPARK_HISTORY_OPTS="" \
+    PYTHON_VERSION=3.12.5
 
-# Install dependencies
-RUN apt-get update && apt-get install -y curl bash procps && \
+# Install dependencies for Python build and other tools
+RUN apt-get update && apt-get install -y \
+    curl bash procps wget build-essential zlib1g-dev libncurses5-dev \
+    libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
+    libbz2-dev xz-utils make iputils-ping netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install iproute2 and ping tools
+RUN apt-get update && apt-get install -y iproute2 iputils-ping && \
     rm -rf /var/lib/apt/lists/*
+
+# Build and install Python 3.12
+RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
+    tar -xf Python-${PYTHON_VERSION}.tgz && \
+    cd Python-${PYTHON_VERSION} && \
+    ./configure --enable-optimizations && \
+    make -j$(nproc) && make altinstall && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/local/bin/python3.12 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 1 && \
+    update-alternatives --set python3 /usr/local/bin/python3.12 && \
+    cd .. && rm -rf Python-${PYTHON_VERSION}*
 
 # Download and extract Spark
 RUN curl -fsSL https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
     | tar -xz -C /opt && \
     mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME}
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-iputils-ping \
-netcat-openbsd \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/*
 
 # Set PATH
 ENV PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"

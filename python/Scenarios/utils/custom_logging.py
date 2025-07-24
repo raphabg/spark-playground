@@ -5,6 +5,8 @@ import shutil
 import time
 import logging
 from logging.handlers import BaseRotatingHandler
+from datetime import datetime
+import zipfile
 
 # ============================================
 # Combined Rotating File Handler (Size + Time)
@@ -144,12 +146,45 @@ class StreamToLogger:
             self.logger.log(self.level, self._buffer.strip())
         self._buffer = ""
 
+def archive_and_cleanup_logs(log_dir, prefix="driver", archive_prefix="logs_archive"):
+    """
+    Compress all existing log files (except previously generated ZIP archives) 
+    into a timestamped ZIP file and delete the original logs.
+
+    :param log_dir: Directory containing log files.
+    :param prefix: Common prefix for log files (e.g., 'driver').
+    :param archive_prefix: Prefix for generated ZIP archive files.
+    """
+    os.makedirs(log_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_filename = os.path.join(log_dir, f"{archive_prefix}_{timestamp}.zip")
+
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file_name in os.listdir(log_dir):
+            file_path = os.path.join(log_dir, file_name)
+
+            # Skip directories, existing zip archives from this function
+            if os.path.isdir(file_path) or (file_name.startswith(archive_prefix) and file_name.endswith(".zip")):
+                continue
+
+            # Add file to zip and remove the original
+            zipf.write(file_path, arcname=file_name)
+            os.remove(file_path)
+
+    return zip_filename
+
 
 # ============================================
 # Logging Setup
 # ============================================
 
 _is_logging_configured = False
+
+def getLogger(type):
+    if type == "stdout":
+        return logging.getLogger("DriverStdout")
+    elif type == "stderr":
+        return logging.getLogger("DriverStderr")
 
 def setup_logging(log_dir=None):
     """
@@ -166,6 +201,8 @@ def setup_logging(log_dir=None):
 
     log_dir = log_dir or os.getenv("SPARK_DRIVER_LOGS_DIR", "./logs")
     os.makedirs(log_dir, exist_ok=True)
+    
+    archive_and_cleanup_logs(log_dir)
 
     stdout_log = os.path.join(log_dir, "driver.stdout.log")
     stderr_log = os.path.join(log_dir, "driver.stderr.log")
@@ -183,9 +220,9 @@ def setup_logging(log_dir=None):
     stdout_logger.handlers.clear()
 
     # Console handler
-    console_handler = logging.StreamHandler(sys.__stdout__)
-    console_handler.setFormatter(formatter)
-    stdout_logger.addHandler(console_handler)
+    console_handler_stdout = logging.StreamHandler(sys.__stdout__)
+    console_handler_stdout.setFormatter(formatter)
+    stdout_logger.addHandler(console_handler_stdout)
 
     # Combined handler
     stdout_handler = CompressingSizeAndTimeRotatingFileHandler(
@@ -207,6 +244,10 @@ def setup_logging(log_dir=None):
     )
     stderr_handler.setFormatter(formatter)
     stderr_logger.addHandler(stderr_handler)
+    
+    console_handler_stderr = logging.StreamHandler(sys.__stderr__)
+    console_handler_stderr.setFormatter(formatter)
+    stderr_logger.addHandler(console_handler_stderr)
 
     # ========================
     # Redirect stdout/stderr
@@ -215,3 +256,6 @@ def setup_logging(log_dir=None):
     sys.stderr = StreamToLogger(stderr_logger, logging.ERROR)
 
     _is_logging_configured = True
+
+stdout_logger = getLogger("stdout")
+stderr_logger = getLogger("stderr")
